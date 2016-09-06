@@ -20,7 +20,7 @@ dfLst = [binary]+[ana.selectDataGL\
 
 print "Searching for frequent itemsets"
 
-result = ana.compareFSS(dfLst,2)
+result,pGlst = ana.compareFSS(dfLst,2,mod_names) # pGlst is the dict to transform patterns to gene lists
 lens = [x.shape[0] for x in dfLst]
 ratios,rDiff,rPvalue,patterns = ana.createFssDF(result,mod_names,col_names,0,lens)
 

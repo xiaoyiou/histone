@@ -309,8 +309,6 @@ def getEnrich2(df,grps):
 
     for key in grps.keys():
         result[key]=df.ix[grps[key],'count'].tolist()
-
-    
     return result
             
 
@@ -330,14 +328,10 @@ def visEnrich(data,gene,left,right,mod_names,N,modLst):
     data = getEnrich(data,[gene],len(mod_names))
 
     x = np.linspace(left,right,N)
-    
-
-
     for i in modLst:
         pl.plot(x,data[gene][i],label=mod_names[i])
         
-    pl.legend(loc='upper right')
-        
+    pl.legend(loc='upper right')        
     plt.show()
 
 
@@ -410,10 +404,6 @@ def calcThreshAll(data,power=4):
     return [x.isf(pValue) for x in distro]
 
     
-    
-
-
-
 def maxBin(data, baseline):
     """
     This is for binarization of the data,
@@ -431,7 +421,6 @@ def maxBin(data, baseline):
     binary['appear']=0
     binary.ix[binary['count']>binary['mean'],'appear']=1
     binary=binary.pivot(index='gene',columns='modid',values='appear')
-
     return binary
 
 
@@ -443,25 +432,18 @@ def __findFSGenes(mod_names,binary):
     """
 
     N = len(mod_names)
-
     return  binary.groupby(range(N)).groups
 
 
 def findFSGenes(report ,mod_names,binary):
     N= len(mod_names)
-    
     eSets = __findFSGenes(mod_names,binary)
-
     result = dict()
-
     for key in report:
-
         temp = [0]*N
-
         for i in key:
             temp[i]=1
         result[key] = []
-        
         for k in eSets:
             if all([x-y>=0 for x,y in zip(k,temp)]):
                 result[key]+=(eSets[k])
@@ -469,21 +451,26 @@ def findFSGenes(report ,mod_names,binary):
     return result
 
 
-def compareFSS(dfLst,min_support):
+def compareFSS(dfLst,min_support,mod_names,base=0):
     """
     This function determines get the results by ratios
+    The last item in the list is the gene names lists related to 
+    the pattern
+    ===================================
+    This method returns the two outputs: 1. the result of frequent itemset, 2. the names asso. with 
+    patterns
     """
     Ns=[]
 
     for df in dfLst:
         Ns.append(float(df.shape[0]))
 
-    report = __findFS(dfLst[0],min_support)
+    report = __findFS(dfLst[base],min_support)
 
     result = dict()
 
     for key in report:
-        result[key]=[report[key]/Ns[0]]
+        result[key]=[report[key]/Ns[base]]
     
     for i in range(1,len(dfLst)):
         report = __findFS(dfLst[i],min_support)
@@ -493,8 +480,11 @@ def compareFSS(dfLst,min_support):
                 result[key].append(report[key]/Ns[i])
             else:
                 result[key].append(0)
-                
-    return result
+
+    gNames = findFSGenes(report, mod_names,dfLst[base])
+
+
+    return (result,gNames)
 
 
 def visCompareFSS(result, mod_names,to_file=None):
@@ -528,12 +518,9 @@ def createFssDF(result,mod_names,col_names,base,lens):
     """
 
     N = len(col_names)
-
     col_inds = range(N)
-
     data = dict()
     patterns = []
-
 
     for i in col_inds:
         j =0
@@ -548,16 +535,16 @@ def createFssDF(result,mod_names,col_names,base,lens):
 
     df = pd.DataFrame.from_dict(data)
 
-    refCol = df.icol[:,base]
 
+    refCol = df.iloc[:,base]
     diff_data = dict()
     
 
     for i in col_inds:
         if i == base:
             continue
-        diff_data[col_names[i]] = (df.icol[:,i]\
-            -df.icol[:,base])/df.icol[:,base]
+        diff_data[col_names[i]] = (df.iloc[:,i]\
+            -df.iloc[:,base])/df.iloc[:,base]
 
     df2 = pd.DataFrame.from_dict(diff_data)
 
@@ -565,11 +552,10 @@ def createFssDF(result,mod_names,col_names,base,lens):
     for i in col_inds:
         if i == base:
             continue
-
-        k = df.icol(i)*lens[i]
+        k = df.iloc[:,i]*lens[i]
         k = k.astype(int)
         P_data[col_names[i]] = binom.cdf\
-            (k,lens[i],df.icol[:,base])
+            (k,lens[i],df.iloc[:,base])
 
     df3 = pd.DataFrame.from_dict(P_data)
 
@@ -588,17 +574,35 @@ def findPatterns(dfP, patterns,\
     col_names = dfP.columns.tolist()
 
     for name in col_names:
-
-        nlst = dfP.loc[dfP[name] < lowT].index.tolist()
-
-        plst = dfP.loc[1-dfP[name]<highT].index.tolist()
-
+        
+        nlst = dfP.loc[dfP[name] < lowT].sort(columns=[name]).index.tolist()
+        plst = dfP.loc[1-dfP[name]<highT].sort(columns=[name],ascending=False).index.tolist()
         pPtns[name] = [patterns[x] for x in plst]
-
         nPtns[name] = [patterns[x] for x in nlst]
 
     return (pPtns,nPtns)
 
+
+def findPatternGlst(ptns,dfLst,mod_names,col_names):
+
+    N=len(mod_names)
+    
+    result = dict()
+    
+    for i in range(1,len(col_names)):
+        key = col_names[i]
+        result[key]=dict()
+        eSets = __findFSGenes(mod_names,dfLst[i])
+        for p in ptns[key]:
+            temp = [0]*N
+            for i in p:
+                temp[i]=1
+            result[key][p]=[]
+            for k in eSets:
+                if all([x-y>=0 for x,y in zip(k,temp)]):
+                    result[key][p]+=(eSets[k])
+    return result
+            
 
         
 

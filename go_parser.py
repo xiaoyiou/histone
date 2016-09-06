@@ -127,3 +127,52 @@ def findGoTerms(go,pattern,report,mod_names):
     glst = report[findGlst(pattern, mod_names)]
     
     return go[(go.index.isin(glst)) & (go['rel']=='involved in')]
+
+
+def findPatterndDist(go,ptns,pgLst,col,\
+                     ind,mod_names,stop_list=None,gcol='slim'):
+
+    """
+    Parameters:
+    go: the go term DataFrame from goReader
+    ptns: the Positive/Negative patterns 
+    col: the subset of genes we are interested in
+    ind: the list of ranks of patterns we want
+    mod_names: modification names
+    stop_list: is the words to skip in format 'word1|word2'
+    ==============================================
+    vis the slim patterns
+    """
+
+    glst = pgLst[col][ptns[col][ind]]
+
+
+    
+    
+    # The filtred go term data frame
+   
+    if stop_list !=None:
+        go =go[~go[gcol].str.contains(stop_list)]
+        go = go[go['rel'].str.contains('involved')]
+    gof = go[go.index.isin(glst)][gcol]
+    ax = gof.value_counts().plot(kind='barh')
+
+    plt.gcf().subplots_adjust(left=.35)
+
+    plt.tight_layout()
+
+    plt.title([mod_names[x] for x in ptns[col][ind]])
+
+    plt.show()
+
+
+def createSummary(go,ptns,mod_names,\
+                  stop_list=None,rel='involved',
+                  to_file=None):
+    
+    """
+    This function creates the data frame of re
+    """
+
+    x = 1
+    
