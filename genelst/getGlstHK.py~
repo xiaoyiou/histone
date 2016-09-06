@@ -1,0 +1,13 @@
+# This script is only used to get the housekeeping gene list
+
+path ='./housekeepers'
+
+with open(path,'rb') as f:
+    for line in f:
+        tokens = line.rstrip().split('\t')
+        gene = tokens[1]
+        print gene
+
+    f.close()
+
+    
