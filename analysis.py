@@ -1,6 +1,7 @@
 """
 This module is the library for conducting analysis and visulizations
 All these methods are still hard coded for arabidopsis not flexible
+This line is to test the git
 """
 import csv
 import numpy as np
