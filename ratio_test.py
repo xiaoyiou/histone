@@ -3,6 +3,7 @@
 # we can "execfile" run this script after loadFiles.py
 
 import analysis as ana
+import rule as ru
 
 glst_paths = ['defense.glst','development.glst'
               ,'flower.glst','flowering.glst','stress.glst'\
@@ -22,11 +23,18 @@ print "Searching for frequent itemsets"
 
 result,pGlst = ana.compareFSS(dfLst,2,mod_names) # pGlst is the dict to transform patterns to gene lists
 lens = [x.shape[0] for x in dfLst]
-ratios,rDiff,rPvalue,patterns = ana.createFssDF(result,mod_names,col_names,0,lens)
+ratios,rDiff,rPvalue = ana.createFssDF(result,mod_names,col_names,0,lens)
 
-pPtns,nPtns = ana.findPatterns(rPvalue,patterns)
+print "Generating postive and negative patterns"
+pPtns,nPtns = ana.findPatterns(rPvalue,lowT=1e-8,highT=1e-8,ratios=ratios,threshP=0.01,threshN=0.01)
 
 
+print "start learning process"
+learner = ru.Brule(len(mod_names),len(col_names)-1)
+
+learner.naiveTrain(pPtns,nPtns)
+
+labels =learner.predict(dfLst[-3])
 
 
 

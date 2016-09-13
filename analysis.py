@@ -7,6 +7,7 @@ import csv
 import numpy as np
 import math
 import pandas as pd
+from yxtools import dictInsert
 from scipy.spatial.distance import cosine
 from scipy.stats import poisson as pois
 from scipy.stats import binom
@@ -117,7 +118,7 @@ def __findFS(df,sup):
     for i in range(L):
         tss.append(df.columns[df.iloc[i]>0].tolist())
     relim=itemmining.get_relim_input(tss)
-
+    
     report = itemmining.relim(relim , min_support =sup )    
     return report 
 
@@ -424,20 +425,20 @@ def maxBin(data, baseline):
     return binary
 
 
-def __findFSGenes(mod_names,binary):
+def __findFSGenes(binary):
     
     """
     This function find the genes for each pattern (frequent Itemset)
     and return the result in the dictionary
     """
 
-    N = len(mod_names)
+    N = binary.shape[1]
     return  binary.groupby(range(N)).groups
 
 
-def findFSGenes(report ,mod_names,binary):
-    N= len(mod_names)
-    eSets = __findFSGenes(mod_names,binary)
+def findFSGenes(report,binary):
+    N = binary.shape[0]
+    eSets = __findFSGenes(binary)
     result = dict()
     for key in report:
         temp = [0]*N
@@ -460,15 +461,13 @@ def compareFSS(dfLst,min_support,mod_names,base=0):
     This method returns the two outputs: 1. the result of frequent itemset, 2. the names asso. with 
     patterns
     """
+    
     Ns=[]
-
     for df in dfLst:
         Ns.append(float(df.shape[0]))
 
     report = __findFS(dfLst[base],min_support)
-
     result = dict()
-
     for key in report:
         result[key]=[report[key]/Ns[base]]
     
@@ -481,7 +480,7 @@ def compareFSS(dfLst,min_support,mod_names,base=0):
             else:
                 result[key].append(0)
 
-    gNames = findFSGenes(report, mod_names,dfLst[base])
+    gNames = findFSGenes(report,dfLst[base])
 
 
     return (result,gNames)
@@ -533,9 +532,7 @@ def createFssDF(result,mod_names,col_names,base,lens):
                 data[col_names[i]].append(result[key][i])
             j+=1
 
-    df = pd.DataFrame.from_dict(data)
-
-
+    df = pd.DataFrame.from_dict(data).set_index([patterns])
     refCol = df.iloc[:,base]
     diff_data = dict()
     
@@ -546,7 +543,7 @@ def createFssDF(result,mod_names,col_names,base,lens):
         diff_data[col_names[i]] = (df.iloc[:,i]\
             -df.iloc[:,base])/df.iloc[:,base]
 
-    df2 = pd.DataFrame.from_dict(diff_data)
+    df2 = pd.DataFrame.from_dict(diff_data).set_index([patterns])
 
     P_data =dict()
     for i in col_inds:
@@ -557,28 +554,45 @@ def createFssDF(result,mod_names,col_names,base,lens):
         P_data[col_names[i]] = binom.cdf\
             (k,lens[i],df.iloc[:,base])
 
-    df3 = pd.DataFrame.from_dict(P_data)
+    df3 = pd.DataFrame.from_dict(P_data).set_index([patterns])
+    
+    return (df,df2,df3)
 
-    return (df,df2,df3,patterns)
-
-
-def findPatterns(dfP, patterns,\
-                 lowT=0.05,highT=0.05):
-
+def findPatterns(dfP,lowT=0.05,highT=0.05,\
+                 ratios=None,threshP=0.05,threshN=0.05):
+    """
+    dfP is the rPvalue data frame
+    patterns is the int->pattern book
+    lowT and highT is the pValue thresholds for left/right tail
+    ratios: default to be none. If not, we are also considering 
+    the absolute ratio in addition to P values
+    
+    tresh: the ratio threshold
+    """
+    
     # The positively related patterns 
     pPtns = dict()
     nPtns = dict()
-
     # The negatively related patterns
 
     col_names = dfP.columns.tolist()
-
+    
     for name in col_names:
-        
-        nlst = dfP.loc[dfP[name] < lowT].sort(columns=[name]).index.tolist()
-        plst = dfP.loc[1-dfP[name]<highT].sort(columns=[name],ascending=False).index.tolist()
-        pPtns[name] = [patterns[x] for x in plst]
-        nPtns[name] = [patterns[x] for x in nlst]
+
+        tempN = dfP.loc[dfP[name]<lowT]
+        if ratios is not None:
+            tempN=tempN.ix[ratios.loc[ratios['all']>\
+        threshN].index.intersection(tempN.index)]
+        nlst = tempN.sort_values(by=[name]).index.tolist()
+
+        tempP = dfP.loc[1-dfP[name]<highT]
+
+        if ratios is not None:
+            tempP= tempP.ix[ratios[ratios[name]\
+                >threshP].index.intersection(tempP.index)]
+        plst = tempP.sort_values(by=[name],ascending=False).index.tolist()
+        pPtns[name] = plst
+        nPtns[name] = nlst
 
     return (pPtns,nPtns)
 
@@ -592,7 +606,7 @@ def findPatternGlst(ptns,dfLst,mod_names,col_names):
     for i in range(1,len(col_names)):
         key = col_names[i]
         result[key]=dict()
-        eSets = __findFSGenes(mod_names,dfLst[i])
+        eSets = __findFSGenes(dfLst[i])
         for p in ptns[key]:
             temp = [0]*N
             for i in p:
@@ -602,13 +616,64 @@ def findPatternGlst(ptns,dfLst,mod_names,col_names):
                 if all([x-y>=0 for x,y in zip(k,temp)]):
                     result[key][p]+=(eSets[k])
     return result
-            
+                    
 
+def summarizePtns(pPtns,nPtns):
+    """
+    summarizePtns will summarize the patterns into sccinct rules 
+    """
+
+    # the edges are going from super set to subset
+    ppatterns = dict()
+    # the edges are going from subset to supber set
+    npatterns = dict()
+
+    for key in pPtns:
+        sbNet = dict()
+        spNet = dict()
+        A = pPtns[key]
+        B = nPtns[key]
+        C = list(set(A+B))
+        tempP=[]
+        tempN=[]
+        for i in C:
+            for j in C:
+                if i==j:
+                    continue
+                if i.issubset(j):
+                    dictInsert(sbNet,i,j)
+                elif i.issuperset(j):
+                    dictInsert(spNet,i,j)
+
+        for x in A:
+            if x not in sbNet:
+                tempP.append(x)
+                continue
+            plst = sbNet[x]
+            print "#####",x,plst
+            if all([y in B for y in plst]):
+                tempP.append(x)
+
+        for x in B:
+            if x not in spNet:
+                tempN.append(x)
+                continue
+            plst = spNet[x]
+            if all([y in A for y in plst]):
+                tempN.append(x)
         
+        ppatterns[key]=tempP
+        npatterns[key]=tempN
+
+    return (ppatterns,npatterns)
+                
+
+    
+    
+
+    
 
 
     
-                
-
             
     
