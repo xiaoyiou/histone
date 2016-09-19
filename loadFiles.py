@@ -10,11 +10,17 @@ import os.path
 import analysis as ana
 import pandas as pd
 
+
+
 aPath='T8_TSS1k.bed'
 bPath='baseline.p'
 
 prefix = 'young/'
 
+# The following part is commented out because notebook
+# is passing arguments to the script. uncomment if
+# not running in interactive notebook
+"""
 if len(sys.argv)>1:
     # The gene annotation bed file path
     aPath =sys.argv[1]
@@ -23,7 +29,7 @@ if len(sys.argv)>1:
     bPath = sys.argv[2]
     
     # The temp file path
-
+"""
 tPath='temp.csv'
 
 
