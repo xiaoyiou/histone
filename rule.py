@@ -1,5 +1,10 @@
 # This modiule deals with the rule learning and testing
 import numpy as np
+import math
+import pandas as pd
+
+def sigmoid(x):
+      return 1 / (1 + math.exp(-x))
 
 def evaluate(labels,glsts,col_names):
 
@@ -31,15 +36,21 @@ class Brule(object):
     # to represent the postively related patterns
     nB = dict()
     # to represent the negatively related patterns
+
+    # For the new learning method, we keep the
+    # probs of each pattern
+
+
     
-    def __init__(self,N,M):
+    
+    def __init__(self,N,M,cNames):
         """
         N is the number of modifications
         M is the number of classes
         """
         self.N=N
         self.M=M
-
+        self.classes = cNames
     def predictHelper(self,row,pb,nb):
 
         if any([all(row | ~x) for x in pb])\
@@ -142,4 +153,71 @@ class Brule(object):
                 
             self.__naiveTrain(pb,nb,key)
 
+        
+    def trainAR(self,rPvalue,lowT=5e-2,highT=5e-2):
+        """
+        This training method doesn't care about the 
+        absolute ratios of pPtns and nPtns, we only 
+        consider the siginificance of each pattern
+        """
+
+        self.pScore = rPvalue.copy()
+
+        for label in self.classes:
+            self.pScore[label] =rPvalue.apply(lambda row:
+      #  math.log10(1-row[label])-math.log(row[label])\
+      #                                        if row[label]<=lowT or 1-row[label]<=highT else 0,axis=1)
+         math.log10(1-row[label])-math.log(row[label])\
+if row[label]<=lowT or 1-row[label]<=highT else 0,axis=1)
+
+         # I'm trying the positive only case   
+
+    def __predictAR(self,x,label,norm,ratios):
+        """
+        for a single row, calculate the score
+        """
+
+        # Some bugs here, wrong sign for the weight
+        
+        result = 0
+        temp = None
+        temp= self.pScore.apply(lambda row:row[label] if x.issuperset(row.name) else 0,axis=1)
+        
+        
+        
+        if norm:
+            result = temp.sum()/(1+len(temp.nonzero()[0]))
+        else:
+            result =temp.sum()
+
+      
+            
+        if result ==0:
+            result=-500
+        return sigmoid(result)
+        
+            
+    def predictAR(self,df,sClass=None,norm=False,ratios=None):
+        """
+        df is nothing but the input data x
+        of binary vectors for each mod
+        """
+
+        result = dict()
+
+        fdf = df.apply(lambda row:\
+            frozenset(row.nonzero()[0].tolist()),axis=1)
+        
+        for key in self.classes:
+            if sClass !=None:
+                if key!=sClass:
+                    continue
+            print key
+            result[key] = fdf.apply(lambda x:\
+                self.__predictAR(x,key,norm,ratios))
+
+        return result
+        
+        
+        
         

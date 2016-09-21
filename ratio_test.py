@@ -37,14 +37,7 @@ print "Generating postive and negative patterns"
 pPtns,nPtns = ana.findPatterns(rPvalue,lowT=5e-2,highT=5e-2,ratios=ratios,threshP=0.05,threshN=0.05)
 
 
-print "start learning process"
-learner = ru.Brule(len(mod_names),len(col_names)-1)
 
-learner.maxPtnTrain(pPtns,nPtns,r=False,a=False)
-
-labels =learner.predict(binary)
-
-print ru.evaluate(labels,gLsts,col_names)
 """
 print "start testing different thresholds"
 performance = dict()
