@@ -3,15 +3,16 @@ import numpy as np
 import math
 import pandas as pd
 
+      
+
 def sigmoid(x):
-      return 1 / (1 + math.exp(-x))
+    return 1 / (1 + math.exp(-x))
 
 def evaluate(labels,glsts,col_names):
-
     result = dict()
+    
 
-
-
+    
     for i in range(len(col_names)-1):
         key = col_names[i+1]
         t = glsts[i]
@@ -134,7 +135,6 @@ class Brule(object):
         for key in pPtns:
             pb = self.findMaxPtns(pPtns[key])
             nb = self.findMaxPtns(nPtns[key])
-
             if r:
                 for x in pb:
                     for y in nb:
@@ -154,30 +154,49 @@ class Brule(object):
             self.__naiveTrain(pb,nb,key)
 
         
-    def trainAR(self,rPvalue,lowT=5e-2,highT=5e-2):
+    def trainAR(self,rPvalue,lowT=1,highT=1,ratios=None):
         """
         This training method doesn't care about the 
         absolute ratios of pPtns and nPtns, we only 
         consider the siginificance of each pattern
         """
-
         self.pScore = rPvalue.copy()
 
-        for label in self.classes:
-            self.pScore[label] =rPvalue.apply(lambda row:
-      #  math.log10(1-row[label])-math.log(row[label])\
-      #                                        if row[label]<=lowT or 1-row[label]<=highT else 0,axis=1)
-         math.log10(1-row[label])-math.log(row[label])\
-if row[label]<=lowT or 1-row[label]<=highT else 0,axis=1)
+        mask = (rPvalue <=lowT)|(1-rPvalue<=highT)
 
-         # I'm trying the positive only case   
+        self.pScore[~mask] = 0
+        
+        if ratios is None:
+            self.pScore[mask]= np.log10(rPvalue[mask])-np.log10(1-rPvalue[mask])
+        else:
+            self.pScore[mask]=np.log10(rPvalue[mask]).multiply(ratios['all'],axis='index')\
+                               -np.log10(1-rPvalue[mask])*ratios[mask]
+            
 
-    def __predictAR(self,x,label,norm,ratios):
+    def trainAR2(self,rPvalue,highT=1,ratios=None):
+        """
+        This method doesn't use the difference between
+        two tails, just use one tail of Binomial distribution
+        """
+        self.pScore = rPvalue.copy()
+
+        mask = (1-rPvalue<=highT)
+
+        self.pScore[~mask] = 0
+        
+        if ratios is None:
+            self.pScore[mask]= -np.log10(1-rPvalue[mask])
+        else:
+            self.pScore[mask]=-np.log10(1-rPvalue[mask])*ratios[mask]
+        
+
+
+        
+        
+    def __predictAR(self,x,label,norm):
         """
         for a single row, calculate the score
         """
-
-        # Some bugs here, wrong sign for the weight
         
         result = 0
         temp = None
@@ -185,19 +204,24 @@ if row[label]<=lowT or 1-row[label]<=highT else 0,axis=1)
         
         
         
+        # I'm trying a new normalization based on number of 
+        # 1's in the data set.
         if norm:
-            result = temp.sum()/(1+len(temp.nonzero()[0]))
+            #result = temp.sum()/(1+len(temp.nonzero()[0]))
+            result = temp.sum()/(len(x)+1)
         else:
-            result =temp.sum()
-
+            result = temp.sum()
+            
+        # return sigmoid(result)
+        return result
       
+#        if result ==0:
+#            result = -100
+
+
+  
             
-        if result ==0:
-            result=-500
-        return sigmoid(result)
-        
-            
-    def predictAR(self,df,sClass=None,norm=False,ratios=None):
+    def predictAR(self,df,sClass=None,norm=False):
         """
         df is nothing but the input data x
         of binary vectors for each mod
@@ -209,15 +233,23 @@ if row[label]<=lowT or 1-row[label]<=highT else 0,axis=1)
             frozenset(row.nonzero()[0].tolist()),axis=1)
         
         for key in self.classes:
-            if sClass !=None:
-                if key!=sClass:
-                    continue
             print key
+            if sClass !=None:
+                  if key!=sClass:
+                        continue
             result[key] = fdf.apply(lambda x:\
-                self.__predictAR(x,key,norm,ratios))
+                self.__predictAR(x,key,norm))
 
         return result
         
         
+    def trainFS(self,ratios):
+        """
+        simply train the learner using the confidence 
+        score of each rule
+        """
         
+        self.pScore = ratios.copy()
+
+    
         

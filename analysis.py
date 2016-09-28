@@ -520,7 +520,6 @@ def createFssDF(result,mod_names,col_names,base,lens):
     col_inds = range(N)
     data = dict()
     patterns = []
-
     for i in col_inds:
         j =0
         for key in result:
