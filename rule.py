@@ -10,9 +10,7 @@ def sigmoid(x):
 
 def evaluate(labels,glsts,col_names):
     result = dict()
-    
-
-    
+       
     for i in range(len(col_names)-1):
         key = col_names[i+1]
         t = glsts[i]

@@ -32,6 +32,7 @@ def prCurve(y_test,y_score,ratios,classes):
 
     plt.xlim([0,1])
     plt.ylim([0,1.05])
+
     plt.xlabel('Recall')
     plt.ylabel('Precision')
     plt.title("PR curve for multi-class")
