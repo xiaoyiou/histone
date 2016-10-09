@@ -5,8 +5,8 @@ from sklearn.metrics import precision_recall_curve as pr
 from sklearn.metrics import average_precision_score as apr
 from sklearn import metrics
 from ggplot import *
-
-
+import seaborn as sns
+import pandas as pd
 def prCurve(y_test,y_score,ratios,classes):
     """
     ;param y_test 
@@ -58,5 +58,29 @@ def roc(fprs,tprs,names):
     plt.title('Receiver operating characteristic example')
     plt.legend(loc="upper left")
     plt.show()
+
+
+
+def visPtns(scores,binary,glst,target,step=100):
+    temp = scores.ix[glst].sort_values(by=target,ascending=False).index
+
+    data = pd.DataFrame(columns=binary.columns)
+    i = 0
+    N = temp.shape[0]
+    nData = binary.ix[temp]
+    
+    while i<N:
+
+        x = nData.iloc[range(i,min(i+step,N))].mean()
+        
+        data.ix[str(i)]=x
+        i+=step
+    plt.clf()
+    sns.heatmap(data)
+
+    
+    
+    
+    
 
     

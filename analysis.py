@@ -105,6 +105,8 @@ def findExc(df):
 
     return data
 
+def xfindFS(df,sup):
+    return __findFS(df,sup)
 
 def __findFS(df,sup):
     """

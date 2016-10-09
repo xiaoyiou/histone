@@ -95,9 +95,6 @@ else:
 
 ############################################################################
 
-
-
-
 data=ana.getMods(tPath)
 gData = ana.getEnrich2(data,ana.getData(data))
 threshs = ana.calcThreshAll(data)
