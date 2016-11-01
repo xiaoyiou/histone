@@ -31,7 +31,7 @@ def findCommonGenes(paths):
 
     return geneLists
 
-def getMods(path , countType=np.int32):
+def getMods(path , countType=np.float):
     result= pd.read_csv(path,sep='\t',names=['chrom','left','right','gene','modid','chromb','start','end','count'],dtype={'left':np.int32,'right':np.int32,'count':countType,'start':np.int32,'end':np.int32})
     result['modid']-=1
     return result
@@ -58,7 +58,7 @@ def visMatrix(data, names,cmin=0,cmax=1):
     column_labels = names
     row_labels = names
     fig, ax = plt.subplots()
-    heatmap = ax.pcolor(data)
+    heatmap = ax.pcolor(data,label='big')
 
     # put the major ticks at the middle of each cell
     ax.set_xticks(np.arange(data.shape[0])+0.5, minor=False)
@@ -68,11 +68,10 @@ def visMatrix(data, names,cmin=0,cmax=1):
     ax.invert_yaxis()
     ax.xaxis.tick_top()
 
-    ax.set_xticklabels(row_labels, minor=False)
+    ax.set_xticklabels(row_labels, minor=False,rotation=30)
     ax.set_yticklabels(column_labels, minor=False)
     
-
-
+    
 
     fig.colorbar(heatmap,ticks=np.arange(cmin,cmax,(cmax-cmin)/float(10)))
     plt.show()
@@ -205,7 +204,7 @@ def selectData(df,go,action,goid):
 
 
 
-def selectDataGL(df, path,ind=1):
+def selectDataGL(df, path,ind=1,sep='\t',start=0):
     
     """
     This function selects the data based on the glst file 
@@ -216,10 +215,13 @@ def selectDataGL(df, path,ind=1):
     # because of male formatting of the file, we cannot directly load it
 
     glst=[]
-
+    i =0
     with open(path,'rb') as file:
         for line in file:
-            tokens = line.rstrip().split('\t')
+            i+=1
+            if i<=start:
+                continue
+            tokens = line.rstrip().split(sep)
             if tokens[ind].startswith('AT'):
                 glst.append(tokens[ind])
         file.close()
@@ -645,7 +647,6 @@ def summarizePtns(pPtns,nPtns):
                     dictInsert(sbNet,i,j)
                 elif i.issuperset(j):
                     dictInsert(spNet,i,j)
-
         for x in A:
             if x not in sbNet:
                 tempP.append(x)
@@ -668,7 +669,6 @@ def summarizePtns(pPtns,nPtns):
 
     return (ppatterns,npatterns)
                 
-
     
     
 

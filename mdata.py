@@ -3,7 +3,7 @@
 import analysis as ana
 import pandas as pd
 import numpy as np
-from scipy.stats import binom
+from scipy.stats import binom,norm
 
 
 class Mdata:
@@ -16,7 +16,7 @@ class Mdata:
 
     
     def __init__(self,binary,mod_names):
-        self.binary=binary
+        self.binary=binary.copy()
         self.mods= mod_names
         self.N = binary.shape[0]
         self.M = len(mod_names)
@@ -44,28 +44,54 @@ class Mdata:
         patterns =[]
         self.lens = self.labels.sum()
         df = pd.DataFrame(index=self.pgMap.columns)
+        ndf = pd.DataFrame(index=self.pgMap.columns)
+        # ndf is the ratios in negative data points
         for col in self.labels.columns:
             for ind in df.index:
                 df.loc[ind,col]=len(\
             self.binary[(self.pgMap[ind]==1) & \
             (self.labels[col]==1)])/float(self.lens[col])
+                if col=='all':
+                    continue
+                ndf.loc[ind,col]=len(\
+            self.binary[(self.pgMap[ind]==1) & \
+            (self.labels[col]==0)])/float(self.N-self.lens[col])
         self.ratios=df
-
-
+        self.nratios=ndf
         
-    def calcrPvalue(self,base='all'):
+        
+        
+    def calcrPvalue(self,base='all',mode='norm'):
+        
         if self.ratios == None:
             self.calcAllRatios()
+
         df = pd.DataFrame(index=self.ratios.index)
-        for col in self.labels.columns:
-            print col
-            temp = self.ratios.loc[:,col]\
-                   *self.lens[col].astype(int)
-            df[col] = binom.cdf(temp,\
+        if mode =='norm':
+            df = self.ratios[self.nratios.columns]-\
+                 self.nratios
+            
+            bg = self.ratios.loc[:,base]
+            for col in df.columns:
+                df.loc[:,col]/=np.sqrt(bg*(1-bg)*\
+                    (float(1)/self.lens[col]+\
+                    float(1)/(self.N-self.lens[col])))
+            self.diff=df.copy()
+            for col in df.columns:
+                df.loc[:,col]=norm.cdf(df.loc[:,col])
+                
+            
+        elif mode=='binom':
+            for col in self.labels.columns:
+                print col
+                temp = self.ratios.loc[:,col]\
+                       *self.lens[col].astype(int)
+                df[col] = binom.cdf(temp,\
                 self.lens[col],self.ratios[base])
+
         self.rPvalue = df
     
-
+        
         
     
     def findPatterns(self,min_support):
@@ -82,33 +108,56 @@ class Mdata:
             self.pgMap[p]=0
             self.pgMap.loc[temp[p],p]=1
 
-    def findPScores(self,mode='ar',ratios=None):
+    def findPScores(self,mode='ar',ratios=False):
         """
         """
         if self.rPvalue==None:
             self.calcrPvalue()
-            
-        if mode == 'ar':
-            if ratios is None:
-                self.pScore= np.log10(self.rPvalue)-np.log10(1-self.rPvalue)
-            else:
-                self.pScore=np.log10(self.rPvalue).multiply(ratios['all'],axis='index')-np.log10(1-self.rPvalue)*ratios
 
-    
-    def predictALL(self,mode='norm'):
+        r =self.ratios.loc[:,self.ratios.columns[1:]]
+        if mode == 'ar':
+            if not ratios:
+                self.pScore= np.log(self.rPvalue)-np.log(1-self.rPvalue)
+            else:
+                self.pScore=np.log(self.rPvalue).multiply(self.ratios['all'],axis='index')-np.log(1-self.rPvalue)*r
+#            self.pScore=self.pScore.apply(lambda row:row*len(row.name),axis=1)
+        elif mode =='bs':
+            # Use binary streaming classificaiton method
+            if not ratios:
+                self.pScore= np.log(self.rPvalue)
+            else:
+                self.pScore=-np.log(1-self.rPvalue).r
+
+        elif mode =='lr':
+            self.pScore = np.log(1-self.rPvalue)/np.log(self.rPvalue)
+            
+    def predictALL(self,binary,mode='norm'):
         """
         reevaluate all genes
         """
         result =None
         m = self.pgMap
         p = self.pScore
-        if mode =='norm':
-            result = self.binary.apply(lambda row:\
+        r = self.ratios.iloc[:,range(1,self.ratios.shape[1])]
+        if mode =='sum':
+            result = binary.apply(lambda row:\
         p.ix[m.columns[m.ix[row.name].nonzero()]].sum() if len(m.ix[row.name].nonzero()[0])>0 else 0,axis=1)
         elif mode == 'maxmin':
             
-            result = self.binary.apply(lambda row:\
+            result = binary.apply(lambda row:\
         p.ix[m.columns[m.ix[row.name].nonzero()]].max()+p.ix[m.columns[m.ix[row.name].nonzero()]].min()if len(m.ix[row.name].nonzero()[0])>0 else 0,axis=1)
+
+        elif mode == 'norm':
+            result = binary.apply(lambda row:\
+    p.ix[m.columns[m.ix[row.name].nonzero()]].sum()/r.ix[m.columns[m.ix[row.name].nonzero()]].sum() if len(m.ix[row.name].nonzero()[0])>0 else 0,axis=1)
+        elif mode =='max':
+            result = binary.apply(lambda row:\
+        p.ix[m.columns[m.ix[row.name].nonzero()]].max()if len(m.ix[row.name].nonzero()[0])>0 else 0,axis=1)
+
+        elif mode == 'ratio':
+            result = binary.apply(lambda row:\
+            r.ix[m.columns[m.ix[row.name].nonzero()]].sum() if len(m.ix[row.name].nonzero()[0])>0 else 0,axis=1)
+
 
         return result
           

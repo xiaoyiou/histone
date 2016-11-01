@@ -61,8 +61,6 @@ if not os.path.isfile(tPath):
 
     command = 'bedtools intersect -wa -wb -loj -a ' +aPath+ ' -b ' +sep.join(templst)+ ' >' + tPath
     
-    
-
     os.system(command)
 
 
@@ -97,6 +95,6 @@ else:
 
 data=ana.getMods(tPath)
 gData = ana.getEnrich2(data,ana.getData(data))
-threshs = ana.calcThreshAll(data)
+threshs = ana.calcThreshAll(data,power=2)
 binary =ana.maxBin(data,threshs)
 

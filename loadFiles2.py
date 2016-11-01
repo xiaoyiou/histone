@@ -11,19 +11,11 @@ import analysis as ana
 import pandas as pd
 import numpy as np
 
-aPath='T8_TSS2k.bed'
-bPath='baseline2.p'
+aPath='T8_TSS1k.bed'
+#bPath='baseline2.p'
 
 prefix = '10day/bgs/'
 
-if len(sys.argv)>1:
-    # The gene annotation bed file path
-    aPath =sys.argv[1]
-    
-    # The baseline count for each modification
-    bPath = sys.argv[2]
-    
-    # The temp file path
 
 tPath='temp2.csv'
 ttPath='temp2'
@@ -51,48 +43,17 @@ if not os.path.isfile(tPath):
     templst = [prefix+f for f in mod_files]
 
     command = 'bedtools intersect -wa -wb -loj -a ' +aPath+ ' -b ' +sep.join(templst)+ ' >' + ttPath
-
-
     
     os.system(command)
 
-    open(tPath,'w').writelines([ line for line in open(ttPath) if  line.split('\t')[4]!='.'])
+#    open(tPath,'w').writelines([ line for line in open(ttPath) if  line.split('\t')[4]!='.'])
      
-# load the files for calculating the average mod number in each bin
-# result is stored in mod:chromosome dictionary
-baseline = dict()
-bdf=[]
-if os.path.isfile(bPath):
-    baseline = P.load(open(bPath,'rb'))
-else:
-    for i in range(len(mod_files)):
-        fname=mod_files[i]
-        with open(prefix+fname,'rb') as f:
-            
-            for line in f:
-                tokens=line.rstrip().split()
-                count=float(tokens[3])
-                key=(i,tokens[0][:-1]+tokens[0][-1].upper())
-                if key in baseline:
-                    baseline[key]+=count
-                else:
-                    baseline[key]=count
-            f.close()
-    for (mod,chrom) in baseline:
-        bdf.append((mod,chrom,baseline[(mod,chrom)]/float(chrlens[chrom]/100)))
-    baseline=pd.DataFrame(bdf,columns=['modid','chrom','mean'])
-    P.dump(baseline,open(bPath,'wb'))
-    
 
 ############################################################################
 
 
 
-
-data=ana.getMods(tPath,countType=np.float32)
-maxes=ana.findMax(data)
-
-binary=pd.merge(maxes,baseline)
-binary['appear']=0
-binary.ix[binary['count']>binary['mean']*3,'appear']=1
-binary=binary.pivot(index='gene',columns='modid',values='appear')
+data=ana.getMods(ttPath,countType=np.float)
+gData = ana.getEnrich2(data,ana.getData(data))
+threshs = ana.calcThreshAll(data,power=8)
+binary =ana.maxBin(data,threshs)

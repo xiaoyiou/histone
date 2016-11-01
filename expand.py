@@ -1,118 +1,91 @@
 # This script is to test the expanding idea
 import vis
-import rule as ru
 import numpy as np
 from sklearn import metrics
 import matplotlib.pyplot as plt
-from functools import partial
+import mdata
 import analysis as ana
+from scipy import interp
+from sklearn.datasets import make_classification
+from sklearn.model_selection import StratifiedKFold as KFold
+from sklearn.linear_model import LogisticRegression
+from sklearn.metrics import roc_curve
+from sklearn.naive_bayes import GaussianNB
 
-def expandAR(mod_names,col_names,dfLst,glst,N=5,cname='flowerS',innerT =0, outterT =0,dfInd=-3):
-    """
-    N is the max number of iterations allowed
-    binary : the binary input data
-    labels : the 1/0 class labels
-    thresh : the threshold for reliable genes
-    """
+
+X= binary[(binary.T!=0).any()]
+#X=binary
+X =X.ix[(X.index.str.contains('ATMG')==False)&(X.index.str.contains('ATCG')==False)]
+glst_paths = ['defense.glst','development.glst'
+              ,'flower.glst','flowering.glst','stress.glst'\
+              ,'stimulus.glst','floweringN.glst']
+
+inds = [0,1,0,0,1,1,0]
+
+col_names = ['all','defense','develop','flowerB'\
+             ,'flowerS','stress','stimulus','flowerN']
+prefix ='genelst/'
+
+dfLst = [X]+[ana.selectDataGL\
+         (X,prefix+glst_paths[i],inds[i])\
+         for i in range(len(glst_paths))]
+
+
+gLsts = [x.index.tolist() for x in dfLst]
+
+# -------------Actual Training and testing--------------
+tprs = []
+base_fpr = np.linspace(0, 1, 201)
+fprs =[]
+lw = 2
+iters = 5
+young =None
+name = 'flowerN'
+
+young = mdata.Mdata(X,mod_names)
+for i in range(len(col_names)):
+    young.addLabels(gLsts[i],col_names[i])
+print "First iteration"
+young.findPatterns(2)
+print "calculating scores"
+young.findPScores(mode='ar',ratios=False)
+m = young.pgMap.copy()
+XX = X
+XX = m.apply(lambda row: row*young.ratios[name],axis=1).as_matrix()
+yy = young.labels[name]
+model = LogisticRegression(C=1e5).fit(XX, yy)
+y_score = model.predict_proba(XX)
+fpr, tpr, _ = roc_curve(yy, y_score[:, 1])
+tpr = interp(base_fpr, fpr, tpr)
+tpr[0] = 0.0
+
+#for i in range(iters):
+    
+
+
+
+
+
+
+
+tprs.append(tpr)
+    
+    
+tprs = np.array(tprs)
+
+
+
+plt.plot(base_fpr, tpr, 'b--',label='%s, AUC: %.2f'%('some',metrics.auc(base_fpr,tpr)))
+plt.plot([0, 1], [0, 1],'r--')
+plt.xlim([-0.01, 1.01])
+plt.ylim([-0.01, 1.01])
+plt.ylabel('True Positive Rate')
+plt.xlabel('False Positive Rate')
+plt.axes().set_aspect('equal', 'datalim')
+plt.legend(loc="lower right")
+plt.show()
 
     
-    learner = ru.Brule(len(mod_names),len(col_names)-1,col_names[1:])
-
-
-    X = dfLst[0]
-    n = X.shape[0]
-    fprs = []
-    tprs = []
-    nums = []
-
-    for i in range(N):
-        m = len(glst)
-        print "Iteration {0:d} with {1:d}".format(i,m)
-        dfLst[dfInd]=X.ix[glst]
-        lens = [x.shape[0] for x in dfLst]
-        print lens
-        rr, _ = ana.compareFSS(dfLst,2,mod_names)
-        ratios,rDiff,rPvalue=ana.createFssDF(rr,mod_names,col_names,0,lens)
-        learner.trainAR(rPvalue,ratios=ratios)
-        result = learner.predictAR(X,norm=True,sClass=cname)
-        scores = result[cname]
-        print "Average Inner Score", (np.mean(scores.ix[glst]))
-        olst = scores[(scores>outterT) &\
-                    (~scores.index.isin(glst))].index.tolist()
-        print " {0:d}  are rated high"\
-            .format(len(olst))
-
-        nlst = scores[(scores>innerT) &\
-                      (scores.index.isin(glst))].index.tolist()
-        print " {0:d} From {1:d} labels are rated high"\
-            .format(len(nlst),m)
-
-        nlst = list(set(nlst).union(olst))
-        nums.append(len(nlst))
-        print "new label is of size {0:d}".format(nums[-1])
-        if nlst == glst:
-            print "same labels : stopping"
-            break
-        y= [1 if x in glst else 0 for x in scores.index]
-        print sum(y)
-        fpr,tpr,thresholds = metrics.roc_curve(y,scores)
-        fprs.append(fpr)
-        tprs.append(tpr)
-        glst = nlst
-
-    return (fprs,tprs,nums,learner)
-        
-
-
-def expandFS(mod_names,col_names,dfLst,glst,N=5,cname='flowerS',innerT =0, outterT =0,dfInd=-3):
-    """
-    N is the max number of iterations allowed
-    binary : the binary input data
-    labels : the 1/0 class labels
-    thresh : the threshold for reliable genes
-    """
 
 
 
-    X = dfLst[0]
-    n = X.shape[0]
-    fprs = []
-    tprs = []
-    nums = []
-
-    for i in range(N):
-        
-        learner = ru.Brule(len(mod_names),len(col_names)-1,col_names[1:])
-        m = len(glst)
-        print "Iteration {0:d} with {1:d}".format(i,m)
-        dfLst[dfInd]=X.ix[glst]
-        lens = [x.shape[0] for x in dfLst]
-        print lens
-        rr, _ = ana.compareFSS(dfLst,2,mod_names)
-        ratios,rDiff,rPvalue=ana.createFssDF(rr,mod_names,col_names,0,lens)
-        learner.trainFS(ratios[col_names[1:]])
-        result = learner.predictAR(X,norm=True,sClass=cname)
-        scores = result[cname]
-        print "Average Inner Score {0:.3f}".format(np.mean(scores.ix[glst]))
-        olst = scores[(scores>outterT) &\
-                    (~scores.index.isin(glst))].index.tolist()
-        print " {0:d} are rated high".format(len(olst))
-
-        nlst = scores[(scores>innerT) &\
-                      (scores.index.isin(glst))].index.tolist()
-        print " {0:d} From {1:d} labels are rated high"\
-            .format(len(nlst),m)
-
-        nlst = list(set(nlst).union(olst))
-        nums.append(len(nlst))
-        print "new label is of size {0:d}".format(nums[-1])
-        if nlst == glst:
-            print "same labels : stopping"
-            break
-        y= [1 if x in glst else 0 for x in scores.index]
-        fpr,tpr,thresholds = metrics.roc_curve(y,scores)
-        fprs.append(fpr)
-        tprs.append(tpr)
-        glst = nlst
-        del learner
-    return (fprs,tprs,nums,learner)
