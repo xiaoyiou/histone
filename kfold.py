@@ -69,7 +69,7 @@ for j in np.random.randint(0,high=10000,size=10):
         model.fit(XX[idx][train],yy[idx][train])
         y_score = model.predict_proba(XX[idx][test])
         fpr, tpr, _ = roc_curve(yy[idx][test], y_score[:, 1])
-#        tpr = np.array([tpr+0.1,np.ones(tpr.shape[0])]).min(axis=0)
+
 #        plt.plot(fpr, tpr, 'b', alpha=0.05)
         tpr = interp(base_fpr, fpr, tpr)
         tpr[0] = 0.0
