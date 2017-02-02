@@ -12,6 +12,7 @@ from scipy.spatial.distance import cosine
 from scipy.stats import poisson as pois
 from scipy.stats import binom
 import pylab as pl
+import re
 import matplotlib.pyplot as plt
 from pymining import itemmining
 
@@ -670,7 +671,26 @@ def summarizePtns(pPtns,nPtns):
     return (ppatterns,npatterns)
                 
     
-    
+def readGeneInfo(path):
+    res = {}
+    # each entry record contains [direction,type]
+    IDreg = re.compile('ID=(.*?);')
+    NoteReg = re.compile('Note=(.*?);')
+    with open(path,'rb') as f:
+        for line in f:
+            tokens = line.rstrip().split('\t')
+            if tokens[2] == 'gene':
+                ID = IDreg.findall(tokens[-1])[0]
+                note = NoteReg.findall(tokens[-1])[0]
+                res[ID]=[True if tokens[6] == '+' else False,\
+                         note]
+    return res
+
+def cleanDir(gdata, geneInfo):
+    for gene, mod in gdata:
+        if gene in geneInfo:
+            if geneInfo[gene][0] == False:
+                gdata[(gene,mod)] =gdata[(gene,mod)][::-1]
 
     
 

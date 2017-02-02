@@ -4,7 +4,7 @@ arabidopsis th
 
 """
 
-import os,sys
+import os
 import cPickle as P
 import os.path
 import analysis as ana
@@ -14,7 +14,7 @@ import pandas as pd
 
 aPath='T8_TSS1k.bed'
 bPath='baseline.p'
-
+giPath='TAIR/TAIR10_GFF3_genes.gff'
 prefix = 'young/'
 
 # The following part is commented out because notebook
@@ -32,7 +32,6 @@ if len(sys.argv)>1:
 """
 tPath='temp.csv'
 
-
 chrlens={'chr1':30432562,
          'chr2':19705358,
          'chr3':23470804,
@@ -40,7 +39,6 @@ chrlens={'chr1':30432562,
          'chr5':26992727,
          'chrC':154477,
          'chrM':366923}
-
 
 mod_files=['gsm701927_h3k18ac.bedgraph','gsm701926_h3k9me2.bedgraph',\
 'gsm701924_h3k4me3.bedgraph','gsm701930_h3k36me2.bedgraph',\
@@ -51,19 +49,11 @@ mod_files=['gsm701927_h3k18ac.bedgraph','gsm701926_h3k9me2.bedgraph',\
 mod_names=['H3K18AC','H3K9ME2','H3K4ME3','H3K36ME2','H3K9AC',\
            'H3K4ME2','H3K36ME3','H3','H3K27ME3','H3K27ME1']
 
-
-
-
 if not os.path.isfile(tPath):
     sep=' '
-
     templst=[prefix+f for f in mod_files]
-
-    command = 'bedtools intersect -wa -wb -loj -a ' +aPath+ ' -b ' +sep.join(templst)+ ' >' + tPath
-    
+    command = 'bedtools intersect -wa -wb -loj -a ' +aPath+ ' -b ' +sep.join(templst)+ ' >' + tPath    
     os.system(command)
-
-
      
 # load the files for calculating the average mod number in each bin
 # result is stored in mod:chromosome dictionary
@@ -89,12 +79,12 @@ else:
         bdf.append((mod,chrom,baseline[(mod,chrom)]/float(chrlens[chrom]/100)))
     baseline=pd.DataFrame(bdf,columns=['modid','chrom','mean'])
     P.dump(baseline,open(bPath,'wb'))
-    
 
 ############################################################################
 
 data=ana.getMods(tPath)
+geneInfo = ana.readGeneInfo(giPath)
 gData = ana.getEnrich2(data,ana.getData(data))
-threshs = ana.calcThreshAll(data,power=2)
+ana.cleanDir(gData,geneInfo)
+threshs = ana.calcThreshAll(data,  power=2)
 binary =ana.maxBin(data,threshs)
-
