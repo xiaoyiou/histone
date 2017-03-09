@@ -17,22 +17,16 @@ raw_data = pd.merge(left, young.labels, how='inner'\
 
 
 
-#all =  cl.Group(raw_data, 'all', mod_names, L, w=0)
-
-
-
-
-
-#all.cluster(2,30)
-stress = cl.Group(raw_data, 'flowerN', mod_names, L, w=3)
-
-for i in xrange(stress.N):
-    stress.hmdata[i].peakify()
-    print "mod" + str(i)
-    start = datetime.datetime.now()
-    stress.hmdata[i].calcAllDistsDTW(power=2, n_jobs=4)
-    end = datetime.datetime.now()
-    print end-start
+all =  cl.Group(raw_data, 'all', mod_names, L, w=0)
+# stress = cl.Group(raw_data, 'stress', mod_names, L, w=0)
+#
+#
+#
+#
+# for i in xrange(stress.N):
+#     test = stress.hmdata[i]
+#     test.dwt()
+# stress.cluster(2,5)
 
 
 

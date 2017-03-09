@@ -149,19 +149,19 @@ def drawGenes(data, title, mod, xs=range(-1000,1100,100), sf = None, append=Fals
     {category: dict of mods}
     """
     mean_data ={}
-    if all([len(x)==0 for x in data.values()]):
+    if all([len(x) == 0 for x in data.values()]):
            return
     if not append or plt.fignum_exists(1):
         plt.figure(figsize=(10,10))
 
     for label in data:
         d = data[label][mod]
-        dmean= d.mean(0)
+        dmean = d.mean(0)
         mean_data[label] = dmean
-        dstd= d.std(0)
-        dupper=dmean+dstd
-        dlower=np.maximum(dmean-dstd,1)
-        mplot=plt.plot(xs,dmean,label=label)
+        dstd = d.std(0)
+        dupper = dmean+dstd
+        dlower = np.maximum(dmean-dstd,1)
+        mplot = plt.plot(xs,dmean,label=label)
         if fill:
             plt.fill_between(xs,dlower,dupper,alpha=0.3,\
                          color=mplot[0].get_color())

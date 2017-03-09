@@ -108,6 +108,7 @@ class Mdata:
             self.pgMap[p]=0
             self.pgMap.loc[temp[p],p]=1
 
+
     def findPScores(self,mode='ar',ratios=False):
         """
         """

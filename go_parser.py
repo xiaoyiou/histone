@@ -35,7 +35,9 @@ def goReader(path):
     slim=[]
 
     aspect=[]
-    
+
+    code = []
+
     with open(path,'rb') as f:
         for line in f:
             tokens = line.rstrip().split('\t')
@@ -47,13 +49,14 @@ def goReader(path):
             goDesc.append(tokens[4])
             aspect.append(tokens[7])
             slim.append(tokens[8])
-            
+            code.append(tokens[9])
         f.close()
 
     temp= pd.DataFrame({'gene':gene,'kind':kind,'rel':relation\
-                         ,'goid':goID,'godesc':goDesc,'slim':slim,'aspect':aspect})
+                         ,'goid':goID,'godesc':goDesc,'slim':slim,'aspect':aspect,\
+                        'code':code})
 
-    return temp.set_index('gene')
+    return temp
 
 def findGlst(gnames,mod_names):
     return frozenset([mod_names.index(x) for x in gnames])

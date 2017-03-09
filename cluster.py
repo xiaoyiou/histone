@@ -12,14 +12,14 @@ from sklearn.neighbors import KNeighborsClassifier as KNN
 from sklearn.metrics import silhouette_score
 from fastdtw import fastdtw
 from scipy.spatial.distance import euclidean
-from sklearn.cluster import KMeans
+from sklearn.cluster import KMeans, DBSCAN
 from scipy import signal
 import peakutils
 import gc
 from functools import partial
 from multiprocessing import Process, Manager
-
-
+import saxnet as sn
+import sax_tools as st
 
 
 class HMData(object):
@@ -46,6 +46,7 @@ class HMData(object):
         self.dists = None
         self.plateau = None
         self.peaklocs = dict()
+        self.approx = None
         if data is not None:
             self.extractData(data)
 
@@ -74,10 +75,11 @@ class HMData(object):
         C = tsc.ts_cluster(3)
         for i in xrange(self.N):
             for j in xrange(i+1, self.N):
-                self.sims[i,j]=C.DTWDistance(self.data[i,:], self.data[j,:], w=self.w)
-                self.sims[j,i] = self.sims[i,j]
+                self.sims[i, j]=C.DTWDistance(self.data[i, :],\
+                                             self.data[j, :], w=self.w)
+                self.sims[j, i] = self.sims[i, j]
 
-    def __smooth(self):
+    def __smooth(self, window):
         if self.w == 0:
             return
 
@@ -85,7 +87,6 @@ class HMData(object):
             w = self.w
             window = np.ones(w) / float(w)
             return np.convolve(row, window, 'same')
-
         self.data = np.apply_along_axis(__convol, 0, self.data)
 
 
@@ -102,29 +103,30 @@ class HMData(object):
         for each gene, calculates the loc of the peak and the amplitude of the peak
         -------
         """
-
+        pass
 
     def __cluster(self, k):
-        """
 
-        Parameters
-        ----------
-        k:  number of clusters
-        n_iter:
-        window
-
-        Returns
-        -------
-
-        """
         #C = tsc.ts_cluster(k)
         #C.k_means_clust(self.data, n_iter, window, progress=True)
 
         kcl = KMeans(n_clusters=k)
         print "starting to fit k:" + str(k)
-        kcl.fit(self.data)
+        if self.approx is not None:
+            kcl.fit(self.approx)
+        else:
+            kcl.fit(self.data)
         print "clustering (k=%d) finished" % (k)
         return kcl
+
+
+    def dbcluster(self, **args):
+        dbcl = DBSCAN(**args)
+        if self.approx is not None:
+            dbcl.fit(self.approx)
+        else:
+            dbcl.fit(self.data)
+        return dbcl
 
     def __getScore(self, C):
         """
@@ -137,8 +139,13 @@ class HMData(object):
         -------
 
         """
+        res = 0
         labels = C.labels_
-        return silhouette_score(self.data, labels, metric='euclidean')
+        if self.approx is not None:
+            res = silhouette_score(self.approx, labels, metric='euclidean')
+        else:
+            res = silhouette_score(self.data, labels, metric='euclidean')
+        return res
 
     def opt_clustering(self, krange):
         low, high = krange
@@ -183,7 +190,11 @@ class HMData(object):
             if v not in cluster:
                 cluster[v] = []
             cluster[v].append(ind)
-        pData = getClusteringRes(cluster, self.data)
+        pData = None
+        if self.approx is None:
+            pData = getClusteringRes(cluster, self.data)
+        else:
+            pData = getClusteringRes(cluster, self.approx)
         plt.figure()
         sns.tsplot(data=pData, time='pos', value='enrich',\
                    condition='cluster', unit='gene', ci=95.0)
@@ -266,13 +277,6 @@ class HMData(object):
         #     if p.is_alive():
         #         p.terminate()
 
-
-
-
-
-
-
-
 class Group(object):
 
     def __init__(self, raw_data, func_name, mod_names, L, w=3):
@@ -319,6 +323,7 @@ class Group(object):
                 axarr[i/nc, i % nc].legend()
         plt.show()
 
+
     def getCatData(self):
         """
         After the clustering, using the assigned labels to discretize the data into
@@ -334,6 +339,72 @@ class Group(object):
                 for ind in ass[key]:
                     data.loc[ind, i] = key
         return data
+
+class Spectrum(object):
+    def __init__(self, raw_data, mod_names, L=21):
+        """
+
+        Parameters
+        ----------
+        rawData:        the rawdata
+        mod_names:      modification English names
+        L:              the number of data points in each time series
+        alphabets:      number of vertical lines
+        """
+        self.saxnets = []  # A list of HMData objects indexed by mod_numbers
+        self.mod_names = list(mod_names)
+        self.L = L
+        self.genes = None
+        self.M = len(mod_names)
+        self.N = 0
+        self.saxGrps = None
+        self.saxNet = None
+
+        if raw_data is None:
+            return
+        for i in xrange(len(mod_names)):
+            temp = HMData('all', i, L, data=raw_data, w=0)
+            if self.genes is None:
+                self.genes = list(temp.genes)
+                self.N = len(self.genes)
+            self.saxnets.append(sn.SaxNet(temp.data))
+            print "loaded data for %s" % (mod_names[i])
+
+    def dwt_transform(self, level=2):
+        for i in xrange(self.M):
+            self.saxnets[i].dwt_transform(level=level)
+
+    def pp_transform(self, n_parts, mode='paa'):
+        for i in xrange(self.M):
+            self.saxnets[i].pp_transform(n_parts, mode=mode)
+
+    def perform_sax(self, alphabets):
+        for i in xrange(self.M):
+            self.saxnets[i].perform_sax(alphabets)
+
+    def ap_clustering(self):
+        for i in xrange(self.M):
+            self.saxnets[i].ap_clustering()
+            print "clustering done for mod %d" % i
+    def calc_dists(self):
+        for i in xrange(self.M):
+            self.saxnets[i].calcDists()
+
+
+    def getSaxGrps(self, thres = 5):
+        all_saxes = np.zeros((self.N, self.M))
+        for i in xrange(self.M):
+            all_saxes[:, i] = self.saxnets[i].ass
+
+        self.sax_data = pd.DataFrame(all_saxes, index=self.genes, columns=self.mod_names)
+        self.saxGrps = self.sax_data.groupby(by=self.sax_data.columns.tolist()).groups
+        for k,v in self.saxGrps.items():
+            if len(v) < thres:
+                del self.saxGrps[k]
+
+
+
+
 
 
 def flattenData(enrich,labels,pattern=None,method='original',w=0):

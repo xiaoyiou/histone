@@ -60,11 +60,11 @@ lw = 2
 
 plt.figure(figsize=(10, 10))
 idx = np.arange(0,len(yy))
-for j in np.random.randint(0,high=10000,size=10):
+for j in np.random.randint(0, high=10000, size=10):
     np.random.shuffle(idx)
     cv = KFold(n_splits=5,random_state=j)
     for i, (train, test) in enumerate(cv.split(XX,yy)):
-#        model = LogisticRegression(C=1e5).fit(XX[idx][train], yy[idx][train])
+#       model = LogisticRegression(C=1e5).fit(XX[idx][train], yy[idx][train])
         model = GaussianNB()
         model.fit(XX[idx][train],yy[idx][train])
         y_score = model.predict_proba(XX[idx][test])

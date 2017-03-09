@@ -106,21 +106,22 @@ def findExc(df):
     return data
 
 def xfindFS(df,sup):
-    return __findFS(df,sup)
+   return __findFS(df, sup)
+
 
 def __findFS(df,sup):
     """
     This function is used to find the "frequent" itemsets
     for the database
     """
-
-
-    L=df.shape[0]
-    tss=[]
-    for i in range(L):
-        tss.append(df.columns[df.iloc[i]>0].tolist())
-    relim=itemmining.get_relim_input(tss)
-    
+    if type(df) == pd.core.frame.DataFrame:
+        L=df.shape[0]
+        tss=[]
+        for i in range(L):
+            tss.append(df.columns[df.iloc[i]>0].tolist())
+        relim=itemmining.get_relim_input(tss)
+    else:
+        relim = itemmining.get_relim_input(df)
     report = itemmining.relim(relim , min_support =sup )    
     return report 
 
