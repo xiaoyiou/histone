@@ -118,7 +118,7 @@ class Mdata:
         r =self.ratios.loc[:,self.ratios.columns[1:]]
         if mode == 'ar':
             if not ratios:
-                self.pScore= np.log(self.rPvalue)-np.log(1-self.rPvalue)
+                self.pScore= self.rPvalue.applymap(lambda x: (np.log(x) - np.log(1-x))if x < 1 else 44 )
             else:
                 self.pScore=np.log(self.rPvalue).multiply(self.ratios['all'],axis='index')-np.log(1-self.rPvalue)*r
 #            self.pScore=self.pScore.apply(lambda row:row*len(row.name),axis=1)

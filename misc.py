@@ -1,5 +1,10 @@
 # this module should take care of all weird stuff
 from yxtools import getTabData
+import matplotlib.pyplot as plt
+import pandas as pd
+import numpy as np
+import sax_tools as st
+import seaborn as sns
 import sys
 
 def getPatternInfo(data, path, obj, col_inds=[1, 2, 5, 6, 7], k=10, opath=None):
@@ -47,3 +52,55 @@ def getPatternInfo(data, path, obj, col_inds=[1, 2, 5, 6, 7], k=10, opath=None):
     if opath:
         sys.stdout.close()
         sys.stdout = stdout
+
+
+def getDistri(data, mod_names, length=21, nmod=10, window=1, label=None, norm=False, mode='average'):
+    # transform the raw data into a list panda data frames where each column is a modification and each data frame
+    # contains the data for a particular position (or window if window > 1)
+    # if label is not None do filtering first
+    temp = data.copy()
+    res = []
+
+    if label is not None :
+        for l in label:
+            temp = temp[temp[l] == 1]
+
+    for i in xrange(length - window + 1):
+        frame = {mod_names[x]: None for x in xrange(nmod)}
+        for j in xrange(nmod):
+            entry = temp[temp.modNum == j].ix[:, range(i, i+window)]
+            if norm:
+                entry = st.znormalization(entry)
+            if mode == 'average':
+                partial = entry.mean(axis=1)
+            elif mode == 'max':
+                partial = entry.max(axis=1)
+            elif mode == 'all':
+                # this one doesn't use combine the window it just concatenate the columns:
+                partial = entry
+            frame[mod_names[j]] = partial.values.flatten().tolist()
+        res.append(pd.DataFrame(frame))
+
+    return res
+
+
+def visDists(A, method='pearson', size=None):
+    # generate a bunch of plots for position-wise correlation
+    for data in A:
+        corrs = data.corr(method=method)
+        plt.figure(figsize=size)
+        temp = sns.heatmap(corrs)
+        temp.set_xticklabels(temp.get_xticklabels(), rotation=30)
+        temp.set_yticklabels(temp.get_yticklabels(), rotation=0)
+        plt.show()
+
+
+
+
+
+
+
+
+
+
+

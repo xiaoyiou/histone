@@ -10,7 +10,7 @@ from sklearn.metrics import roc_curve
 from sklearn.naive_bayes import GaussianNB
 
 
-name = 'flowerN'
+name = 'salt'
 method = 'HPSS'
 
 m = young.pgMap.copy()

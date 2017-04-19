@@ -403,6 +403,19 @@ class Spectrum(object):
                 del self.saxGrps[k]
 
 
+    def vis_all(self,mod_names, nc = 5, size=None):
+        f, axarr = plt.subplots(self.M/nc + 0 if self.N % nc ==0 else 1, nc)
+        for i in xrange(self.M):
+            distr = map(len, self.saxnets[i].clusters.values())
+            print distr
+            for ind, v in enumerate(self.saxnets[i].cluster_centers):
+                axarr[i/nc, i % nc].plot(v, label='Cluster %d' % ind, \
+                linewidth=10*distr[ind]/1.0/self.N)
+                axarr[i/nc, i % nc].set_title(mod_names[i])
+                axarr[i/nc, i % nc].legend()
+        if size:
+           f.set_size_inches(size[0],size[1])
+        plt.show()
 
 
 

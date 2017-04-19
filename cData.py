@@ -15,12 +15,12 @@ X= binary[(binary.T!=0).any()]
 X =X.ix[(X.index.str.contains('ATMG')==False)&(X.index.str.contains('ATCG')==False)]
 glst_paths = ['defense.glst','development.glst'
               ,'flower.glst','flowering.glst','stress.glst'\
-              ,'stimulus.glst','floweringN.glst']
+              ,'stimulus.glst','floweringN.glst','salt.glst','heat.glst']
 
-inds = [0,1,0,0,1,1,0]
+inds = [0,1,0,0,1,1,0,0,0]
 
 col_names = ['all','defense','develop','flowerB'\
-             ,'flowerS','stress','stimulus','flowerN']
+             ,'flowerS','stress','stimulus','flowerN','salt','heat']
 prefix ='genelst/'
 
 dfLst = [X]+[ana.selectDataGL\
