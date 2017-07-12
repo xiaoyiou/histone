@@ -4,8 +4,8 @@ import rule as ru
 import numpy as np
 from sklearn import metrics
 import matplotlib.pyplot as plt
-
-
+import cycle
+linecycler= cycle(["-","--","-.",":","-v"])
 if 'asocL' in locals():
     print "clearing old data"
     del asocL
