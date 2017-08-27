@@ -13,8 +13,6 @@ class Mdata:
     we also add the labels
     """
 
-
-    
     def __init__(self,binary,mod_names):
         self.binary=binary.copy()
         self.mods= mod_names

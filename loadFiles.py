@@ -10,8 +10,6 @@ import os.path
 import analysis as ana
 import pandas as pd
 
-
-
 aPath='T8_TSS1k.bed'
 bPath='baseline.p'
 giPath='TAIR/TAIR10_GFF3_genes.gff'

@@ -60,7 +60,7 @@ class SaxNet(object):
             cls = AffinityPropagation(preference=preference, affinity='precomputed')
             data = self.pw_dists()
         else:
-            AffinityPropagation(preference=preference)
+            cls = AffinityPropagation(preference=preference)
             data = self.avdata.values() if len(self.avdata) else \
                 (self.cdata if self.cdata is not None else self.data)
         cls.fit(data)

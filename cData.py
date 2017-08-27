@@ -20,7 +20,7 @@ glst_paths = ['defense.glst','development.glst'
 inds = [0,1,0,0,1,1,0,0,0]
 
 col_names = ['all','defense','develop','flowerB'\
-             ,'flowerS','stress','stimulus','flowerN','salt','heat']
+             ,'flowerS','stress','stimulus','flowerN',   'salt','heat']
 prefix ='genelst/'
 
 dfLst = [X]+[ana.selectDataGL\
